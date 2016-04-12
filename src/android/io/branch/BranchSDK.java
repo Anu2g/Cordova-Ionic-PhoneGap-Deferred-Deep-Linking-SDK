@@ -58,11 +58,14 @@ public class BranchSDK extends CordovaPlugin
     public void onNewIntent(Intent intent)
     {
         Log.d(LCAT, "start onNewIntent()");
+        
+        this.activity = this.cordova.getActivity();
+        this.activity.setIntent(intent);
 
-        if (this.activity != null) {
-            this.setDebug(true);
-            this.initSession(null);
-        }
+        // HURDLR CHANGE (PV): we don't need to initSession because we'll do it ourselves in javascript
+        //        if (this.activity != null) {
+        //            this.initSession(null);
+        //        }
     }
 
     /**
@@ -109,7 +112,7 @@ public class BranchSDK extends CordovaPlugin
 
         if (action.equals("setDebug")) {
             if (args.length() == 1) {
-                this.setDebug(args.getBoolean(0));
+                this.setDebug(args.getBoolean(0), callbackContext);
             }
             return true;
         } else if (action.equals("initSession")) {
@@ -289,14 +292,14 @@ public class BranchSDK extends CordovaPlugin
 
         JSONObject sessionParams = this.instance.getLatestReferringParams();
 
-        if (sessionParams == null) {
+        if (sessionParams == null || sessionParams.length() == 0) {
             Log.d(LCAT, "return is null");
+            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, /* send boolean: false as the data */ false));
         } else {
             Log.d(LCAT, "return is not null");
             Log.d(LCAT, sessionParams.toString());
+            callbackContext.success(sessionParams);
         }
-
-        callbackContext.success(sessionParams);
 
     }
 
@@ -316,14 +319,14 @@ public class BranchSDK extends CordovaPlugin
 
         JSONObject installParams = this.instance.getFirstReferringParams();
 
-        if (installParams == null) {
+        if (installParams == null || installParams.length() == 0) {
             Log.d(LCAT, "return is null");
+            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, /* send boolean: false as the data */ false));
         } else {
             Log.d(LCAT, "return is not null");
             Log.d(LCAT, installParams.toString());
+            callbackContext.success(installParams);
         }
-
-        callbackContext.success(installParams);
 
     }
 
@@ -575,8 +578,9 @@ public class BranchSDK extends CordovaPlugin
      * <p>If you want to flag debug, call this <b>before</b> initUserSession</p>
      *
      * @param isEnable A {@link Boolean} value to enable/disable debugging mode for the app.
+     * @param callbackContext   A callback to execute at the end of this method
      */
-    private void setDebug(boolean isEnable)
+    private void setDebug(boolean isEnable, CallbackContext callbackContext)
     {
 
         Log.d(LCAT, "start setDebug()");
@@ -589,6 +593,7 @@ public class BranchSDK extends CordovaPlugin
             debugInstance.setDebug();
         }
 
+        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, /* send boolean: false as the data */ isEnable));
     }
 
     /**

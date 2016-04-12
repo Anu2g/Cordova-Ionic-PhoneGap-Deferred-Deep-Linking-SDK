@@ -42,7 +42,7 @@
     NSLog(@"start handleDeepLink");
     NSString *arg = [command.arguments objectAtIndex:0];
     NSURL *url = [NSURL URLWithString:arg];
-
+    
     Branch *branch = [self getInstance];
     return [NSNumber numberWithBool:[branch handleDeepLink:url]];
 }
@@ -50,15 +50,15 @@
 - (void)continueUserActivity:(CDVInvokedUrlCommand*)command
 {
     NSLog(@"start continueUserActivity");
-
+    
     NSString *activityType = (NSString *)[command.arguments objectAtIndex:0];
     NSDictionary *userInfo = (NSDictionary*)[command.arguments objectAtIndex:1];
-
+    
     NSUserActivity *userActivity = [[NSUserActivity alloc] initWithActivityType:activityType];
     [userActivity setUserInfo:userInfo];
-
+    
     Branch *branch = [self getInstance];
-
+    
     NSLog(@"continuing user activity...");
     [branch continueUserActivity:userActivity];
 }
@@ -70,26 +70,29 @@
 {
     NSLog(@"start initSession");
     Branch *branch = [self getInstance];
-
     [branch initSessionWithLaunchOptions:nil andRegisterDeepLinkHandler:^(NSDictionary *params, NSError *error) {
         NSLog(@"inside initSessionAndRegisterDeepLinkHandler block");
         NSString *resultString;
+        CDVPluginResult *pluginResult = nil;
         if (!error) {
             if (params != nil && [params count] > 0) {
                 NSError *err;
                 NSData *jsonData = [NSJSONSerialization dataWithJSONObject:params
-                                                                     options:0
+                                                                   options:0
                                                                      error:&err];
                 if (!jsonData) {
                     NSLog(@"Parsing Error: %@", [err localizedDescription]);
                     resultString = [NSString stringWithFormat:@"Parsing Error: %@", [err localizedDescription]];
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:resultString];
                 } else {
                     NSLog(@"Success");
                     resultString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:params];
                 }
             } else {
                 NSLog(@"No data found");
                 resultString = @"No data found";
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:resultString];
             }
         }
         else {
@@ -102,8 +105,12 @@
                                                                   error:&error];
             
             resultString = [[NSString alloc] initWithData:errorJSON encoding:NSUTF8StringEncoding];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:resultString];
         }
         NSLog(@"returning data to js interface..");
+        if (command != nil) {
+            [self.commandDelegate sendPluginResult: pluginResult callbackId: command.callbackId];
+        }
         [self.commandDelegate evalJs:[NSString stringWithFormat:@"DeepLinkHandler(%@)", resultString]];
     }];
 }
@@ -111,7 +118,15 @@
 - (void)setDebug:(CDVInvokedUrlCommand*)command
 {
     NSLog(@"start setDebug");
-    [[Branch getInstance] setDebug];
+    CDVPluginResult* pluginResult;
+    bool enableDebug = [[command.arguments objectAtIndex:0] boolValue] == YES;
+    if (enableDebug) {
+        [[Branch getInstance] setDebug];
+    }
+    
+    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:enableDebug];
+    
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void)getAutoInstance:(CDVInvokedUrlCommand*)command
@@ -125,25 +140,15 @@
     NSLog(@"start getLatestReferringParams");
     Branch *branch = [self getInstance];
     NSDictionary *sessionParams = [branch getLatestReferringParams];
-
+    
     CDVPluginResult* pluginResult = nil;
-
+    
     if (sessionParams != nil && [sessionParams count] > 0) {
-        NSError *err;
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:sessionParams
-                                                           options:0
-                                                             error:&err];
-        if (!jsonData) {
-            NSLog(@"Parsing Error: %@", [err localizedDescription]);
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[err localizedDescription]];
-        } else {
-            NSLog(@"Success");
-            NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonString];
-        }
+        NSLog(@"Success");
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:sessionParams];
     } else {
         NSLog(@"No data found");
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Empty data"];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:FALSE];
     }
     NSLog(@"returning data to js interface..");
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
@@ -154,25 +159,15 @@
     NSLog(@"start getFirstReferringParams");
     Branch *branch = [self getInstance];
     NSDictionary *installParams = [branch getFirstReferringParams];
-
+    
     CDVPluginResult* pluginResult = nil;
-
+    
     if (installParams != nil && [installParams count] > 0) {
-        NSError *err;
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:installParams
-                                                           options:0
-                                                             error:&err];
-        if (!jsonData) {
-            NSLog(@"Parsing Error: %@", [err localizedDescription]);
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[err localizedDescription]];
-        } else {
-            NSLog(@"Success");
-            NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonString];
-        }
+        NSLog(@"Success");
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:installParams];
     } else {
         NSLog(@"No data found");
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Empty data"];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:FALSE];
     }
     NSLog(@"returning data to js interface..");
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
@@ -182,7 +177,7 @@
 {
     NSLog(@"start setIdentity");
     Branch *branch = [self getInstance];
-
+    
     [branch setIdentity:[command.arguments objectAtIndex:0] withCallback:^(NSDictionary *params, NSError *error) {
         NSLog(@"inside setIdentity block");
         CDVPluginResult* pluginResult = nil;
@@ -230,23 +225,36 @@
     else {
         name = (NSString *)command.arguments;
     }
-
+    
     Branch *branch = [self getInstance];
-
+    
     if (state) {
         [branch userCompletedAction:name withState:state];
     }
     else {
         [branch userCompletedAction:name];
     }
+    
+    // TODO: need to resolve according to result of userCompletedAction, but no callback version of the method is exposed.
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"Success"];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void)logout:(CDVInvokedUrlCommand*)command
 {
     NSLog(@"start logout");
     Branch *branch = [self getInstance];
-    [branch logout];
+    [branch logoutWithCallback:^(BOOL changed, NSError *error) {
+        CDVPluginResult *pluginResult = nil;
+        if (!error) {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Success"];
+        } else {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
+        }
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }];
     self.branchUniversalObj = nil;
+    
 }
 
 #pragma mark - Branch Referral Reward System
@@ -255,24 +263,14 @@
 {
     NSLog(@"start loadRewards");
     Branch *branch = [self getInstance];
-
+    
     [branch loadRewardsWithCallback:^(BOOL changed, NSError *error) {
         NSLog(@"inside loadRewardsWithCallback block");
         CDVPluginResult* pluginResult = nil;
         if(!error) {
-            NSNumber *credits = [NSNumber numberWithInteger:[branch getCredits]];
-            NSError *err;
-            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:@{@"credits":credits}
-                                                               options:0
-                                                                 error:&err];
-            if (!jsonData) {
-                NSLog(@"Parsing Error: %@", [err localizedDescription]);
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[err localizedDescription]];
-            } else {
-                NSLog(@"Success");
-                NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonString];
-            }
+            int credits = (int)[branch getCredits];
+            NSLog(@"Success");
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsInt:credits];
         }
         else {
             NSLog(@"Load Rewards Error: %@", [error localizedDescription]);
@@ -286,14 +284,14 @@
 - (void)redeemRewards:(CDVInvokedUrlCommand*)command
 {
     NSLog(@"start redeemRewards");
-
+    
     NSInteger amount = ((NSNumber *)[command.arguments objectAtIndex:0]).integerValue;
     Branch *branch = [self getInstance];
-
+    
     if ([command.arguments count] == 2) {
-
+        
         NSString *bucket = [command.arguments objectAtIndex:1];
-
+        
         [branch redeemRewards:(NSInteger)amount forBucket:(NSString *)bucket callback:^(BOOL changed, NSError *error) {
             NSLog(@"inside redeemRewards:forBucket block");
             CDVPluginResult* pluginResult = nil;
@@ -346,31 +344,21 @@
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         }];
     }
-
-
+    
+    
 }
 
 - (void)getCreditHistory:(CDVInvokedUrlCommand*)command
 {
     NSLog(@"start getCreditHistory");
     Branch *branch = [self getInstance];
-
+    
     [branch getCreditHistoryWithCallback:^(NSArray *list, NSError *error) {
         NSLog(@"inside getCreditHistoryWithCallback block");
         CDVPluginResult* pluginResult = nil;
         if (!error) {
-            NSError *err;
-            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:list
-                                                               options:0
-                                                                 error:&err];
-            if (!jsonData) {
-                NSLog(@"Parsing Error: %@", [err localizedDescription]);
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[err localizedDescription]];
-            } else {
-                NSLog(@"Success");
-                NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonString];
-            }
+            NSLog(@"Success");
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:list];
         }
         else {
             NSLog(@"Credit History Error: %@", [error localizedDescription]);
@@ -386,14 +374,14 @@
 - (void)createBranchUniversalObject:(CDVInvokedUrlCommand*)command
 {
     NSLog(@"start createBranchUniversalObject");
-
+    
     NSDictionary *properties = [command.arguments objectAtIndex:0];
     self.branchUniversalObj = [[BranchUniversalObject alloc] init];
-
+    
     for (id key in properties) {
         if ([key isEqualToString:@"contentMetadata"]){
             NSDictionary *metadata = (NSDictionary *)[properties valueForKey:key];
-
+            
             for (id key_ in metadata) {
                 [self.branchUniversalObj addMetadataKey:key_ value:[metadata valueForKey:key_]];
             }
@@ -402,7 +390,7 @@
             NSString *indexingMode = [properties valueForKey:key];
             if ([indexingMode isEqualToString:@"private"]) {
                 self.branchUniversalObj.contentIndexMode = ContentIndexModePrivate;
-
+                
             }
             else if ([indexingMode isEqualToString:@"public"]){
                 self.branchUniversalObj.contentIndexMode = ContentIndexModePublic;
@@ -416,7 +404,7 @@
             [self.branchUniversalObj setValue:[properties objectForKey:key] forKey:key];
         }
     }
-
+    
     NSLog(@"init BUO - %@", self.branchUniversalObj);
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"createBranchUniversalObject Success"];
     NSLog(@"returning data to js interface..");
@@ -432,7 +420,7 @@
     else {
         self.branchUniversalObj.canonicalIdentifier = [command.arguments objectAtIndex:0];
     }
-
+    
     NSLog(@"init BUO - %@", self.branchUniversalObj);
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"createBranchUniversalObject Success"];
     NSLog(@"returning data to js interface..");
@@ -448,7 +436,7 @@
     else {
         self.branchUniversalObj.title = [command.arguments objectAtIndex:0];
     }
-
+    
     NSLog(@"init BUO - %@", self.branchUniversalObj);
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"createBranchUniversalObject Success"];
     NSLog(@"returning data to js interface..");
@@ -473,9 +461,9 @@
     NSLog(@"start generateShortUrl");
     NSDictionary *arg1 = [command.arguments objectAtIndex:0];
     NSDictionary *arg2 = [command.arguments objectAtIndex:1];
-
+    
     BranchLinkProperties *props = [[BranchLinkProperties alloc] init];
-
+    
     for (id key in arg1) {
         if ([key isEqualToString:@"duration"]) {
             props.matchDuration = (NSUInteger)[((NSNumber *)[arg1 objectForKey:key]) integerValue];
@@ -484,26 +472,24 @@
             [props setValue:[arg1 objectForKey:key] forKey:key];
         }
     }
-
+    
     for (id key in arg2) {
-        [props addControlParam:key withValue:[arg1 objectForKey:key]];
+        [props addControlParam:key withValue:[arg2 objectForKey:key]];
     }
-
+    
     [self.branchUniversalObj getShortUrlWithLinkProperties:props andCallback:^(NSString *url, NSError *error) {
         NSLog(@"inside getShortUrlWithLinkProperties block");
         CDVPluginResult* pluginResult = nil;
         if (!error) {
             NSError *err;
-            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:@{@"generatedLink":url}
-                                                               options:0
-                                                                 error:&err];
-            if (!jsonData) {
+            NSDictionary *jsonObj = [[NSDictionary alloc] initWithObjectsAndKeys:url, @"url", 0, @"options", &err, @"error", nil];
+
+            if (!jsonObj) {
                 NSLog(@"Parsing Error: %@", [err localizedDescription]);
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[err localizedDescription]];
             } else {
                 NSLog(@"Success");
-                NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonString];
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:jsonObj];
             }
         }
         else {
@@ -518,16 +504,16 @@
 {
     NSLog(@"start showShareSheet");
     NSString *shareText = @"Share Link";
-
+    
     if ([command.arguments count] >= 3) {
         shareText = [command.arguments objectAtIndex:2];
     }
-
+    
     NSDictionary *arg1 = [command.arguments objectAtIndex:0];
     NSDictionary *arg2 = [command.arguments objectAtIndex:1];
-
+    
     BranchLinkProperties *linkProperties = [[BranchLinkProperties alloc] init];
-
+    
     for (id key in arg1) {
         if ([key isEqualToString:@"duration"]) {
             linkProperties.matchDuration = (NSUInteger)[((NSNumber *)[arg1 objectForKey:key]) integerValue];
@@ -536,17 +522,17 @@
             [linkProperties setValue:[arg1 objectForKey:key] forKey:key];
         }
     }
-
+    
     for (id key in arg2) {
         [linkProperties addControlParam:key withValue:[arg1 objectForKey:key]];
     }
-
+    
     [self.branchUniversalObj showShareSheetWithLinkProperties:linkProperties
-                                                andShareText:shareText
-                                                fromViewController:self.viewController
-                                                completion:^(NSString *activityType, BOOL completed) {
-        NSLog(@"showShareSheet is finished with activityType - %@", activityType);
-    }];
+                                                 andShareText:shareText
+                                           fromViewController:self.viewController
+                                                   completion:^(NSString *activityType, BOOL completed) {
+                                                       NSLog(@"showShareSheet is finished with activityType - %@", activityType);
+                                                   }];
 }
 
 - (void)listOnSpotlight:(CDVInvokedUrlCommand*)command {
@@ -589,7 +575,7 @@
     NSLog(@"start getShortURLWithParams");
     Branch *branch = [self getInstance];
     NSDictionary *params = [command.arguments objectAtIndex:0];
-
+    
     return [branch getShortURLWithParams:params];
 }
 
@@ -605,7 +591,7 @@
     NSLog(@"start getLongURLWithParams");
     NSDictionary *params = [command.arguments objectAtIndex:0];
     NSString *channel = [command.arguments objectAtIndex:1];
-
+    
     Branch *branch = [self getInstance];
     return [branch getContentUrlWithParams:params andChannel:channel];
 }
@@ -614,9 +600,9 @@
 {
     NSLog(@"start getBranchActivityItemWithParams");
     UIActivityItemProvider *provider = [Branch getBranchActivityItemWithParams:[command.arguments objectAtIndex:0]];
-
+    
     UIActivityViewController *shareViewController = [[UIActivityViewController alloc] initWithActivityItems:@[ provider ] applicationActivities:nil];
-
+    
     [self.viewController presentViewController:shareViewController animated:YES completion:nil];
 }
 
