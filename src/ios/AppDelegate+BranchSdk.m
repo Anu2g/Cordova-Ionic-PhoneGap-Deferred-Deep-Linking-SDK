@@ -23,22 +23,14 @@
     if (![[Branch getInstance] handleDeepLink:url]) {
         // do other deep link routing for the Facebook SDK, Pinterest SDK, etc
         [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:CDVPluginHandleOpenURLNotification object:url]];
-        // send unhandled URL to notification
-        [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:@"BSDKPostUnhandledURL" object:url]];
     }
     return YES;
 }
 
 // Respond to Universal Links
 - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray *restorableObjects))restorationHandler {
-    if (![[Branch getInstance] continueUserActivity:userActivity]) {
-        // send unhandled URL to notification
-        if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
-            [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:@"BSDKPostUnhandledURL" object:[userActivity.webpageURL absoluteString]]];
-        }
-    }
-
-    return YES;
+    BOOL handledByBranch = [[Branch getInstance] continueUserActivity:userActivity];
+    return handledByBranch;
 }
 
 @end

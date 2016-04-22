@@ -764,38 +764,24 @@ public class BranchSDK extends CordovaPlugin
 
             Log.d(LCAT, "SessionListener onInitFinished()");
 
-            String out;
-
-
             if (error == null) {
-
-
                 // params are the deep linked params associated with the link that the user clicked -> was re-directed to this app
-                //  params will be empty if no data found.
+                // params will be empty if no data found.
                 if (referringParams == null) {
                     Log.d(LCAT, "return is null");
                 } else {
                     Log.d(LCAT, "return is not null");
                     Log.d(LCAT, referringParams.toString());
-	            out = String.format("DeepLinkHandler(%s)", referringParams.toString());
-                    webView.sendJavascript(out);
+                    webView.sendJavascript(String.format("DeepLinkHandler(%s)", referringParams.toString()));
                 }
 
                 if (this._callbackContext != null) {
                     this._callbackContext.success(referringParams);
                 }
-
             } else {
                 String errorMessage = error.getMessage();
 
                 Log.d(LCAT, errorMessage);
-
-		// HURDLR: note that this return value is inconsistent with iOS
-		// iOS returns the original url and a dictionary as follows:
-		// { Unable to process URL", @"error", urlString, @"url" }
-		// Therefore, NonBranchLinkHandler is unreliable
-                out = String.format("NonBranchLinkHandler(%s)", error.toString());
-                webView.sendJavascript(out);
 
                 if (this._callbackContext != null) {
                     this._callbackContext.error(errorMessage);
