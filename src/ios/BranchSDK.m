@@ -204,8 +204,7 @@
 
         CDVPluginResult* pluginResult = nil;
         if (!error) {
-            // HURDLR CHANGE: I am having this plugin return a bool to be consistent with the setIdentity method and Java.
-	    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:params];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:params];
         }
         else {
             
@@ -632,7 +631,6 @@
     }
 }
 
->>>>>>> upstream/master
 #pragma mark - URL Methods (not fully implemented YET!)
 
 - (NSString *)getShortURL:(CDVInvokedUrlCommand*)command

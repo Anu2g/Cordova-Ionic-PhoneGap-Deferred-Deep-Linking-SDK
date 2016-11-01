@@ -689,9 +689,6 @@ public class BranchSDK extends CordovaPlugin {
                     this._callbackContext.success(referringParams);
                 }
 
-                if (this._callbackContext != null) {
-                    this._callbackContext.success(referringParams);
-                }
             } else {
                 JSONObject message = new JSONObject();
                 try {
@@ -806,11 +803,7 @@ public class BranchSDK extends CordovaPlugin {
         @Override
         public void onStateChanged(boolean changed, BranchError error) {
 
-            Log.d(LCAT, "RedeemRewardsListener onStateChanged()");
-
             if (error == null) {
-
-                Log.d(LCAT, "RedeemRewards success");
 
                 this._callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, /* send boolean: is changed */ changed));
 
