@@ -1,3 +1,5 @@
+'use strict';
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,25 +21,25 @@
 
 var app = {
     // Application Constructor
-    initialize: function() {
+    initialize: function initialize() {
         this.bindEvents();
     },
     // Bind Event Listeners
     //
     // Bind any events that are required on startup. Common events are:
     // 'load', 'deviceready', 'offline', and 'online'.
-    bindEvents: function() {
+    bindEvents: function bindEvents() {
         document.addEventListener('deviceready', this.onDeviceReady, false);
     },
     // deviceready Event Handler
     //
     // The scope of 'this' is the event. In order to call the 'receivedEvent'
     // function, we must explicitly call 'app.receivedEvent(...);'
-    onDeviceReady: function() {
+    onDeviceReady: function onDeviceReady() {
         app.receivedEvent('app');
     },
     // Update DOM on a Received Event
-    receivedEvent: function(id) {
+    receivedEvent: function receivedEvent(id) {
 
         if (navigator.userAgent.indexOf('iPhone') >= 0) {
             document.getElementsByTagName("html")[0].className = 'ios';
@@ -47,14 +49,12 @@ var app = {
 
         SetDebug(true);
         InitSession();
-
     }
 };
 
 app.initialize();
 
-function DeepLinkHandler(data)
-{
+function DeepLinkHandler(data) {
     if (data) {
         alert('Initialize: ' + JSON.stringify(data));
     } else {
@@ -62,22 +62,13 @@ function DeepLinkHandler(data)
     }
 }
 
-function NonBranchLinkHandler(data)
-{
+function NonBranchLinkHandler(data) {
     if (data) {
         alert('Non-branch link found: ' + JSON.stringify(data));
     }
 }
 
-function NonBranchLinkHandler(data)
-{
-    if (data) {
-        alert('Non-branch link found: ' + JSON.stringify(data));
-    }
-}
-
-function SetDebug(isEnabled)
-{
+function SetDebug(isEnabled) {
     console.log('Trigger SetDebug()');
 
     Branch.setDebug(isEnabled);
@@ -85,10 +76,10 @@ function SetDebug(isEnabled)
     alert('Debug mode enabled');
 }
 
-function InitSession()
-{
+function InitSession() {
     console.log('Trigger InitSession()');
 
+    Branch.setMixpanelToken('<your-mixpanel-token-here>');
     Branch.initSession().then(function (res) {
         console.log(res);
         alert('Response: ' + JSON.stringify(res));
@@ -98,8 +89,7 @@ function InitSession()
     });
 }
 
-function CustomAction()
-{
+function CustomAction() {
     console.log('Trigger CustomAction()');
 
     var action = document.getElementById('custom-action').value;
@@ -113,8 +103,7 @@ function CustomAction()
     });
 }
 
-function GetLatestReferringParams()
-{
+function GetLatestReferringParams() {
     console.log('Trigger GetLatestReferringParams()');
 
     Branch.getLatestReferringParams().then(function (res) {
@@ -126,8 +115,7 @@ function GetLatestReferringParams()
     });
 }
 
-function GetFirstReferringParams()
-{
+function GetFirstReferringParams() {
     console.log('Trigger GetFirstReferringParams()');
 
     Branch.getFirstReferringParams().then(function (res) {
@@ -139,8 +127,7 @@ function GetFirstReferringParams()
     });
 }
 
-function SetIdentity()
-{
+function SetIdentity() {
     console.log('Trigger SetIdentity()');
 
     var newIdentity = document.getElementById('identity').value;
@@ -154,8 +141,7 @@ function SetIdentity()
     });
 }
 
-function Logout()
-{
+function Logout() {
     console.log('Trigger Logout()');
 
     Branch.logout().then(function (res) {
@@ -169,35 +155,30 @@ function Logout()
 
 var branchUniversalObj = null;
 
-function CreateBranchUniversalObject()
-{
+function CreateBranchUniversalObject() {
 
     console.log('Trigger CreateBranchUniversalObject()');
 
     var properties = {
         canonicalIdentifier: 'testbed',
-        title: 'testbed',
-        contentDescription: 'Testbed Application',
+        title: 'Here is some content',
+        contentDescription: 'Here is a content description',
         contentImageUrl: 'https://imgflip.com/s/meme/Derp.jpg',
         contentIndexingMode: 'public',
         contentMetadata: {}
     };
 
-    Branch.createBranchUniversalObject(properties)
-        .then(function (res) {
-            console.log(res);
-            alert('Response: ' + JSON.stringify(res));
-            branchUniversalObj = res;
-        })
-        .catch(function (err) {
-            console.error(err);
-            alert('Error: ' + JSON.stringify(err));
-        });
-
+    Branch.createBranchUniversalObject(properties).then(function (res) {
+        console.log(res);
+        alert('Response: ' + JSON.stringify(res));
+        branchUniversalObj = res;
+    }).catch(function (err) {
+        console.error(err);
+        alert('Error: ' + JSON.stringify(err));
+    });
 }
 
-function RegisterView()
-{
+function RegisterView() {
     console.log('Trigger RegisterView()');
 
     branchUniversalObj.registerView().then(function (res) {
@@ -209,27 +190,16 @@ function RegisterView()
     });;
 }
 
-function GenerateShortUrl()
-{
+function GenerateShortUrl() {
     console.log('Trigger GenerateShortUrl()');
 
     var properties = {
         feature: 'test',
-        alias: document.getElementById('alias').value,
         channel: 'test',
         stage: 'test',
         duration: 10000
     };
-    var controlParams = {
-        $fallback_url: 'www.another.com',
-        $desktop_url: 'www.desktop.com',
-        $android_url: 'test',
-        $ios_url: 'ios',
-        $ipad_url: 'ipad',
-        $fire_url: 'fire',
-        $blackberry_url: 'blackberry',
-        $windows_phone_url: 'win-phone'
-    };
+    var controlParams = { };
 
     branchUniversalObj.generateShortUrl(properties, controlParams).then(function (res) {
         console.log(res);
@@ -240,27 +210,15 @@ function GenerateShortUrl()
     });
 }
 
-function ShowShareSheet()
-{
+function ShowShareSheet() {
     console.log('Trigger ShowShareSheet()');
 
     var properties = {
         feature: 'test',
-        alias: document.getElementById('alias').value,
         channel: 'test',
-        stage: 'test',
-        duration: 10000
+        stage: 'test'
     };
-    var controlParams = {
-        $fallback_url: 'www.another.com',
-        $desktop_url: 'www.desktop.com',
-        $android_url: 'test',
-        $ios_url: 'ios',
-        $ipad_url: 'ipad',
-        $fire_url: 'fire',
-        $blackberry_url: 'blackberry',
-        $windows_phone_url: 'win-phone'
-    };
+    var controlParams = { };
 
     console.log(branchUniversalObj);
 
@@ -269,21 +227,19 @@ function ShowShareSheet()
         console.log('Share sheet launched');
     });
     branchUniversalObj.onShareSheetDismissed(function () {
-      console.log('Share sheet dimissed');
+        console.log('Share sheet dismissed');
     });
     branchUniversalObj.onLinkShareResponse(function (res) {
-      console.log('Share link response: ' + JSON.stringify(res));
+        console.log('Share link response: ' + JSON.stringify(res));
     });
     branchUniversalObj.onChannelSelected(function (res) {
-      console.log('Channel selected: ' + JSON.stringify(res));
+        console.log('Channel selected: ' + JSON.stringify(res));
     });
 
     branchUniversalObj.showShareSheet(properties, controlParams, 'Custom Text');
-
 }
 
-function ListOnSpotlight()
-{
+function ListOnSpotlight() {
     console.log('Trigger ListOnSpotlight()');
     branchUniversalObj.listOnSpotlight().then(function (res) {
         console.log(res);
@@ -294,8 +250,7 @@ function ListOnSpotlight()
     });
 }
 
-function LoadRewards()
-{
+function LoadRewards() {
     console.log('Trigger LoadRewards()');
     Branch.loadRewards().then(function (res) {
         console.log(res);
@@ -306,8 +261,7 @@ function LoadRewards()
     });
 }
 
-function RedeemRewards()
-{
+function RedeemRewards() {
     console.log('Trigger RedeemRewards()');
     var reward = 1000;
 
@@ -320,8 +274,7 @@ function RedeemRewards()
     });
 }
 
-function CreditHistory()
-{
+function CreditHistory() {
     console.log('Trigger CreditHistory()');
     Branch.creditHistory().then(function (res) {
         console.log(res);
@@ -331,3 +284,4 @@ function CreditHistory()
         alert('Error: ' + JSON.stringify(err));
     });
 }
+//# sourceMappingURL=index.js.map

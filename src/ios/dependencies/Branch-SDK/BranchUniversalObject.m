@@ -9,12 +9,17 @@
 #import "BranchUniversalObject.h"
 #import "BNCError.h"
 #import "BranchConstants.h"
+#import "BNCPreferenceHelper.h"
+#import "BNCFabricAnswers.h"
 
-@implementation BranchUniversalObject
+@implementation BranchUniversalObject {
+    BNCPreferenceHelper *_preferenceHelper;
+}
 
 - (instancetype)initWithCanonicalIdentifier:(NSString *)canonicalIdentifier {
     if (self = [super init]) {
         self.canonicalIdentifier = canonicalIdentifier;
+        _preferenceHelper = [BNCPreferenceHelper preferenceHelper];
     }
     return self;
 }
@@ -22,6 +27,7 @@
 - (instancetype)initWithTitle:(NSString *)title {
     if (self = [super init]) {
         self.title = title;
+        _preferenceHelper = [BNCPreferenceHelper preferenceHelper];
     }
     return self;
 }
@@ -43,36 +49,45 @@
 }
 
 - (void)registerView {
-    if (!self.canonicalIdentifier && !self.title) {
-        NSLog(@"[Branch Warning] a canonicalIdentifier or title are required to uniquely identify content, so could not register view.");
-        return;
-    }
-    
-    [[Branch getInstance] registerViewWithParams:[self getParamsForServerRequest]
-                                     andCallback:nil];
+    [self registerViewWithCallback:nil];
 }
 
 - (void)registerViewWithCallback:(callbackWithParams)callback {
     if (!self.canonicalIdentifier && !self.title) {
         if (callback) {
-            callback(nil, [NSError errorWithDomain:BNCErrorDomain
+            callback([[NSDictionary alloc] init], [NSError errorWithDomain:BNCErrorDomain
                                               code:BNCInitError
                                           userInfo:@{ NSLocalizedDescriptionKey: @"A canonicalIdentifier or title are required to uniquely identify content, so could not register view." }]);
         }
         else {
-            NSLog(@"[Branch Warning] a canonicalIdentifier or title are required to uniquely identify content, so could not register view.");
+            [_preferenceHelper logWarning:@"A canonicalIdentifier or title are required to uniquely identify content, so could not register view."];
         }
         return;
     }
     
+    if (self.automaticallyListOnSpotlight) {
+        [self listOnSpotlight];
+    }
     [[Branch getInstance] registerViewWithParams:[self getParamsForServerRequest] andCallback:callback];
+}
+
+- (void)userCompletedAction:(NSString *)action {
+    NSMutableDictionary *actionPayload = [[NSMutableDictionary alloc] init];
+    NSDictionary *linkParams = [self getParamsForServerRequest];
+    actionPayload[BNCCanonicalIdList] = @[self.canonicalIdentifier];
+    actionPayload[self.canonicalIdentifier] = linkParams;
+    
+    [[Branch getInstance] userCompletedAction:action withState:actionPayload];
+    if (self.automaticallyListOnSpotlight && [action isEqualToString:BNCRegisterViewEvent]) {
+        [self listOnSpotlight];
+    }
 }
 
 #pragma mark - Link Creation Methods
 
 - (NSString *)getShortUrlWithLinkProperties:(BranchLinkProperties *)linkProperties {
     if (!self.canonicalIdentifier && !self.title) {
-        NSLog(@"[Branch Warning] a canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL.");
+        [_preferenceHelper logWarning:@"A canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL."];
         return nil;
     }
     
@@ -82,16 +97,17 @@
                                             andChannel:linkProperties.channel
                                             andFeature:linkProperties.feature
                                               andStage:linkProperties.stage
+                                           andCampaign:linkProperties.campaign
                                       andMatchDuration:linkProperties.matchDuration];
 }
 
 - (void)getShortUrlWithLinkProperties:(BranchLinkProperties *)linkProperties andCallback:(callbackWithUrl)callback {
     if (!self.canonicalIdentifier && !self.title) {
         if (callback) {
-            callback(nil, [NSError errorWithDomain:BNCErrorDomain code:BNCInitError userInfo:@{ NSLocalizedDescriptionKey: @"A canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL." }]);
+            callback([BNCPreferenceHelper preferenceHelper].userUrl, [NSError errorWithDomain:BNCErrorDomain code:BNCInitError userInfo:@{ NSLocalizedDescriptionKey: @"A canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL." }]);
         }
         else {
-            NSLog(@"[Branch Warning] a canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL.");
+            [_preferenceHelper logWarning:@"A canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL."];
         }
         return;
     }
@@ -103,12 +119,13 @@
                                      andChannel:linkProperties.channel
                                      andFeature:linkProperties.feature
                                        andStage:linkProperties.stage
+                                    andCampaign:linkProperties.campaign
                                     andCallback:callback];
 }
 
 - (NSString *)getShortUrlWithLinkPropertiesAndIgnoreFirstClick:(BranchLinkProperties *)linkProperties {
     if (!self.canonicalIdentifier && !self.title) {
-        NSLog(@"[Branch Warning] a canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL.");
+        [_preferenceHelper logWarning:@"A canonicalIdentifier or title are required to uniquely identify content, so could not generate a URL."];
         return nil;
     }
     // keep this operation outside of sync operation below.
@@ -119,6 +136,7 @@
                                      andChannel:linkProperties.channel
                                      andFeature:linkProperties.feature
                                        andStage:linkProperties.stage
+                                           andCampaign:linkProperties.campaign
                                        andAlias:linkProperties.alias
                                  ignoreUAString:UAString
                               forceLinkCreation:YES];
@@ -126,16 +144,18 @@
 
 - (UIActivityItemProvider *)getBranchActivityItemWithLinkProperties:(BranchLinkProperties *)linkProperties {
     if (!self.canonicalIdentifier && !self.canonicalUrl && !self.title) {
-        NSLog(@"[Branch Warning] a canonicalIdentifier, canonicalURL, or title are required to uniquely identify content. In order to not break the end user experience with sharing, Branch SDK will proceed to create a URL, but content analytics may not properly include this URL.");
+        [_preferenceHelper logWarning:@"A canonicalIdentifier, canonicalURL, or title are required to uniquely identify content. In order to not break the end user experience with sharing, Branch SDK will proceed to create a URL, but content analytics may not properly include this URL."];
     }
     
     NSMutableDictionary *params = [[self getParamsForServerRequestWithAddedLinkProperties:linkProperties] mutableCopy];
     if (linkProperties.matchDuration) {
         [params setObject:@(linkProperties.matchDuration) forKey:BRANCH_REQUEST_KEY_URL_DURATION];
     }
+
     return [Branch getBranchActivityItemWithParams:params
                                            feature:linkProperties.feature
                                              stage:linkProperties.stage
+                                          campaign:linkProperties.campaign
                                               tags:linkProperties.tags
                                              alias:linkProperties.alias];
 }
@@ -145,9 +165,22 @@
 }
 
 - (void)showShareSheetWithLinkProperties:(BranchLinkProperties *)linkProperties andShareText:(NSString *)shareText fromViewController:(UIViewController *)viewController completion:(shareCompletion)completion {
-    [self showShareSheetWithLinkProperties:linkProperties andShareText:shareText fromViewController:viewController anchor:nil completion:completion];
+    [self showShareSheetWithLinkProperties:linkProperties andShareText:shareText fromViewController:viewController anchor:nil completion:completion orCompletionWithError:nil];
 }
-- (void)showShareSheetWithLinkProperties:(BranchLinkProperties *)linkProperties andShareText:(NSString *)shareText fromViewController:(UIViewController *)viewController anchor:(UIBarButtonItem *)anchor completion:(shareCompletion)completion {
+- (void)showShareSheetWithLinkProperties:(BranchLinkProperties *)linkProperties andShareText:(NSString *)shareText fromViewController:(UIViewController *)viewController completionWithError:(shareCompletionWithError)completion {
+    [self showShareSheetWithLinkProperties:linkProperties andShareText:shareText fromViewController:viewController anchor:nil completion:nil orCompletionWithError:completion];
+}
+- (void)showShareSheetWithLinkProperties:(nullable BranchLinkProperties *)linkProperties andShareText:(nullable NSString *)shareText fromViewController:(nullable UIViewController *)viewController anchor:(nullable UIBarButtonItem *)anchor completion:(nullable shareCompletion)completion {
+    [self showShareSheetWithLinkProperties:linkProperties andShareText:shareText fromViewController:viewController anchor:anchor completion:completion orCompletionWithError:nil];
+}
+
+- (void)showShareSheetWithLinkProperties:(nullable BranchLinkProperties *)linkProperties andShareText:(nullable NSString *)shareText fromViewController:(nullable UIViewController *)viewController anchor:(nullable UIBarButtonItem *)anchor completionWithError:(nullable shareCompletionWithError)completion {
+    [self showShareSheetWithLinkProperties:linkProperties andShareText:shareText fromViewController:viewController anchor:anchor completion:nil orCompletionWithError:completion];
+}
+
+- (void)showShareSheetWithLinkProperties:(BranchLinkProperties *)linkProperties andShareText:(NSString *)shareText fromViewController:(UIViewController *)viewController anchor:(UIBarButtonItem *)anchor completion:(shareCompletion)completion orCompletionWithError:(shareCompletionWithError)completionError {
+    // Log share initiated event
+    [self userCompletedAction:BNCShareInitiatedEvent];
     UIActivityItemProvider *itemProvider = [self getBranchActivityItemWithLinkProperties:linkProperties];
     NSMutableArray *items = [NSMutableArray arrayWithObject:itemProvider];
     if (shareText) {
@@ -157,8 +190,12 @@
     
     if ([shareViewController respondsToSelector:@selector(completionWithItemsHandler)]) {
         shareViewController.completionWithItemsHandler = ^(NSString *activityType, BOOL completed, NSArray *returnedItems, NSError *activityError) {
-            if (completion) {
-                completion(activityType, completed);
+            // Log share completed event
+            [self userCompletedAction:BNCShareCompletedEvent];
+            if (completion || completionError) {
+                if (completion) { completion(activityType, completed); }
+                else if (completionError) { completionError(activityType, completed, activityError); }
+                [BNCFabricAnswers sendEventWithName:@"Branch Share" andAttributes:[self getDictionaryWithCompleteLinkProperties:linkProperties]];
             }
         };
     } else {
@@ -173,8 +210,11 @@
     if (viewController && [viewController respondsToSelector:@selector(presentViewController:animated:completion:)]) {
         presentingViewController = viewController;
     }
-    else if ([[[[UIApplication sharedApplication].delegate window] rootViewController] respondsToSelector:@selector(presentViewController:animated:completion:)]) {
-        presentingViewController = [[[UIApplication sharedApplication].delegate window] rootViewController];
+    else {
+        Class UIApplicationClass = NSClassFromString(@"UIApplication");
+        if ([[[[UIApplicationClass sharedApplication].delegate window] rootViewController] respondsToSelector:@selector(presentViewController:animated:completion:)]) {
+            presentingViewController = [[[UIApplicationClass sharedApplication].delegate window] rootViewController];
+        }
     }
     
     if (linkProperties.controlParams[BRANCH_LINK_DATA_KEY_EMAIL_SUBJECT]) {
@@ -182,7 +222,7 @@
             [shareViewController setValue:linkProperties.controlParams[BRANCH_LINK_DATA_KEY_EMAIL_SUBJECT] forKey:@"subject"];
         }
         @catch (NSException *exception) {
-            NSLog(@"[Branch warning] Unable to setValue 'emailSubject' forKey 'subject' on UIActivityViewController.");
+            [_preferenceHelper logWarning:@"Unable to setValue 'emailSubject' forKey 'subject' on UIActivityViewController."];
         }
     }
     
@@ -199,19 +239,6 @@
     else {
         NSLog(@"[Branch warning, fatal] No view controller is present to show the share sheet. Aborting.");
     }
-}
-
-
-- (void)showShareSheetWithShareText:(NSString *)shareText andCallback:(callback)callback {
-    [self showShareSheetWithLinkProperties:nil andShareText:shareText fromViewController:nil andCallback:callback];
-}
-
-- (void)showShareSheetWithLinkProperties:(BranchLinkProperties *)linkProperties andShareText:(NSString *)shareText fromViewController:(UIViewController *)viewController andCallback:(callback)callback {
-    [self showShareSheetWithLinkProperties:linkProperties andShareText:shareText fromViewController:viewController completion:^(NSString *activityType, BOOL completed) {
-        if (callback) {
-            callback();
-        }
-    }];
 }
 
 - (void)listOnSpotlight {
@@ -312,7 +339,16 @@
     if (dictionary[BRANCH_LINK_DATA_KEY_KEYWORDS]) {
         universalObject.keywords = dictionary[BRANCH_LINK_DATA_KEY_KEYWORDS];
     }
+    if (dictionary[BNCPurchaseAmount]) {
+        universalObject.price = [dictionary[BNCPurchaseAmount] floatValue];
+    }
+    if (dictionary[BNCPurchaseCurrency]) {
+        universalObject.currency = dictionary[BNCPurchaseCurrency];
+    }
     
+    if (dictionary[BRANCH_LINK_DATA_KEY_CONTENT_TYPE]) {
+        universalObject.type = dictionary[BRANCH_LINK_DATA_KEY_CONTENT_TYPE];
+    }
     return universalObject;
 }
 
@@ -338,6 +374,12 @@
     [self safeSetValue:self.keywords forKey:BRANCH_LINK_DATA_KEY_KEYWORDS onDict:temp];
     [self safeSetValue:@(1000 * [self.expirationDate timeIntervalSince1970]) forKey:BRANCH_LINK_DATA_KEY_CONTENT_EXPIRATION_DATE onDict:temp];
     [self safeSetValue:self.type forKey:BRANCH_LINK_DATA_KEY_CONTENT_TYPE onDict:temp];
+    [self safeSetValue:self.currency forKey:BNCPurchaseCurrency onDict:temp];
+    if (self.price) {
+        // have to add if statement because safeSetValue only accepts objects so even if self.price is not set
+        // a valid NSNumber object will be created and the request will have amount:0 in all cases.
+        [self safeSetValue:[NSNumber numberWithFloat:self.price] forKey:BNCPurchaseAmount onDict:temp];
+    }
     
     [temp addEntriesFromDictionary:[self.metadata copy]];
     return [temp copy];
@@ -349,6 +391,19 @@
     return [temp copy];
 }
 
+- (NSDictionary *)getDictionaryWithCompleteLinkProperties:(BranchLinkProperties *)linkProperties {
+    NSMutableDictionary *temp = [[self getParamsForServerRequestWithAddedLinkProperties:linkProperties] mutableCopy];
+    
+    [self safeSetValue:linkProperties.tags forKey:[NSString stringWithFormat:@"~%@", BRANCH_REQUEST_KEY_URL_TAGS] onDict:temp];
+    [self safeSetValue:linkProperties.feature forKey:[NSString stringWithFormat:@"~%@", BRANCH_REQUEST_KEY_URL_FEATURE] onDict:temp];
+    [self safeSetValue:linkProperties.alias forKey:[NSString stringWithFormat:@"~%@", BRANCH_REQUEST_KEY_URL_ALIAS] onDict:temp];
+    [self safeSetValue:linkProperties.channel forKey:[NSString stringWithFormat:@"~%@", BRANCH_REQUEST_KEY_URL_CHANNEL] onDict:temp];
+    [self safeSetValue:linkProperties.stage forKey:[NSString stringWithFormat:@"~%@", BRANCH_REQUEST_KEY_URL_STAGE] onDict:temp];
+    [self safeSetValue:linkProperties.campaign forKey:[NSString stringWithFormat:@"~%@", BRANCH_REQUEST_KEY_URL_CAMPAIGN] onDict:temp];
+    [self safeSetValue:@(linkProperties.matchDuration) forKey:[NSString stringWithFormat:@"~%@", BRANCH_REQUEST_KEY_URL_DURATION] onDict:temp];
+
+    return [temp copy];
+}
 - (void)safeSetValue:(NSObject *)value forKey:(NSString *)key onDict:(NSMutableDictionary *)dict {
     if (value) {
         dict[key] = value;

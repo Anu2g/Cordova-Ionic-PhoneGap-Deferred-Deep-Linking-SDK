@@ -1,3 +1,5 @@
+'use strict';
+
 /**
  * Branch.IO SDK
  * -------------
@@ -20,7 +22,7 @@ var _API_CLASS = 'BranchSDK'; // SDK Class
  */
 function execute(method, params) {
 
-    params = ( ! params) ? [] : params;
+    params = !params ? [] : params;
 
     return new Promise(function (resolve, reject) {
         exec(function (res) {
@@ -29,7 +31,6 @@ function execute(method, params) {
             reject(err);
         }, _API_CLASS, method, params);
     });
-
 }
 
 /**
@@ -43,21 +44,19 @@ function execute(method, params) {
  */
 function executeCallback(method, callback, params) {
 
-    params = ( ! params) ? [] : params;
+    params = !params ? [] : params;
 
     exec(callback, function (err) {
         console.error(err);
     }, _API_CLASS, method, params);
-
 }
 
 /**
  * @class Branch
  */
-var Branch = function () {
+var Branch = function Branch() {
 
     this.debugMode = false;
-
 };
 
 /**
@@ -68,11 +67,23 @@ var Branch = function () {
 Branch.prototype.initSession = function () {
 
     return execute('initSession');
-
 };
 
 /**
- * Set debug mode.
+ * Get Mixpanel tolen/assisstance.
+ * NOTE: This must be called before initSession
+ *
+ * @param (String) token. Default = false
+ *
+ * @return (Promise)
+ */
+Branch.prototype.setMixpanelToken = function (token) {
+
+    return execute('setMixpanelToken', [token]);
+};
+
+/**
+ * Set debug mode to simulate fresh installs.
  * NOTE: This must be called before initSession
  *
  * @param (Boolean) isEnabled. Default = false
@@ -97,7 +108,6 @@ Branch.prototype.setDebug = function (isEnabled) {
 Branch.prototype.getFirstReferringParams = function () {
 
     return execute('getFirstReferringParams');
-
 };
 
 /**
@@ -108,7 +118,6 @@ Branch.prototype.getFirstReferringParams = function () {
 Branch.prototype.getLatestReferringParams = function () {
 
     return execute('getLatestReferringParams');
-
 };
 
 /**
@@ -128,7 +137,6 @@ Branch.prototype.setIdentity = function (identity) {
             reject('Please set an identity');
         });
     }
-
 };
 
 /**
@@ -139,7 +147,6 @@ Branch.prototype.setIdentity = function (identity) {
 Branch.prototype.logout = function () {
 
     return execute('logout');
-
 };
 
 /**
@@ -159,11 +166,10 @@ Branch.prototype.userCompletedAction = function (action, metaData) {
     }
 
     return execute('userCompletedAction', args);
-
 };
 
 /**
- * Create an unverisal Branch object
+ * Create an universal Branch object
  *
  * @params (Object) options
  *
@@ -201,7 +207,6 @@ Branch.prototype.createBranchUniversalObject = function (options) {
             obj.registerView = function () {
 
                 return execute('registerView', [obj.instanceId]);
-
             };
 
             /**
@@ -240,7 +245,6 @@ Branch.prototype.createBranchUniversalObject = function (options) {
             obj.generateShortUrl = function (options, controlParameters) {
 
                 return execute('generateShortUrl', [obj.instanceId, options, controlParameters]);
-
             };
 
             /**
@@ -279,12 +283,11 @@ Branch.prototype.createBranchUniversalObject = function (options) {
              */
             obj.showShareSheet = function (options, controlParameters, shareText) {
 
-                if ( ! shareText) {
+                if (!shareText) {
                     shareText = 'This stuff is awesome: ';
                 }
 
                 return execute('showShareSheet', [obj.instanceId, options, controlParameters, shareText]);
-
             };
 
             /**
@@ -297,16 +300,12 @@ Branch.prototype.createBranchUniversalObject = function (options) {
                 if (deviceVendor.indexOf('Apple') < 0) {
                     executeCallback('onShareLinkDialogLaunched', callback, [obj.instanceId]);
                 }
-
             };
 
             obj.onShareSheetDismissed = function (callback) {
 
-                if (deviceVendor.indexOf('Apple') < 0) {
-                    executeCallback('onShareLinkDialogDismissed', callback, [obj.instanceId]);
-                }
-
-            }
+                executeCallback('onShareLinkDialogDismissed', callback, [obj.instanceId]);
+            };
 
             /**
              * Set on link share listener callback.
@@ -315,10 +314,7 @@ Branch.prototype.createBranchUniversalObject = function (options) {
              */
             obj.onLinkShareResponse = function (callback) {
 
-                if (deviceVendor.indexOf('Apple') < 0) {
-                    executeCallback('onLinkShareResponse', callback, [obj.instanceId]);
-                }
-
+                executeCallback('onLinkShareResponse', callback, [obj.instanceId]);
             };
 
             /**
@@ -331,7 +327,6 @@ Branch.prototype.createBranchUniversalObject = function (options) {
                 if (deviceVendor.indexOf('Apple') < 0) {
                     executeCallback('onChannelSelected', callback, [obj.instanceId]);
                 }
-
             };
 
             /**
@@ -339,17 +334,14 @@ Branch.prototype.createBranchUniversalObject = function (options) {
              */
             obj.listOnSpotlight = function () {
 
-                return execute('listOnSpotlight');
-
+                return execute('listOnSpotlight', [obj.instanceId]);
             };
 
             resolve(obj);
-
         }, function (err) {
             reject(err);
         });
     });
-
 };
 
 /**
@@ -357,10 +349,13 @@ Branch.prototype.createBranchUniversalObject = function (options) {
  *
  * @return (Promise)
  */
-Branch.prototype.loadRewards = function () {
+Branch.prototype.loadRewards = function (bucket) {
 
-    return execute('loadRewards');
+    if (!bucket) {
+        bucket = '';
+    }
 
+    return execute('loadRewards', [bucket]);
 };
 
 /**
@@ -380,7 +375,6 @@ Branch.prototype.redeemRewards = function (value, bucket) {
     }
 
     return execute('redeemRewards', params);
-
 };
 
 /**
@@ -391,7 +385,14 @@ Branch.prototype.redeemRewards = function (value, bucket) {
 Branch.prototype.creditHistory = function () {
 
     return execute('getCreditHistory');
-
 };
 
-module.exports = new Branch;
+/**
+ * NonBranchLinkHandler callback placeholder.
+ *
+ * @param {String} response
+ */
+window.NonBranchLinkHandler = typeof NonBranchLinkHandler === 'undefined' ? function (response) {} : NonBranchLinkHandler;
+
+module.exports = new Branch();
+//# sourceMappingURL=branch.js.map

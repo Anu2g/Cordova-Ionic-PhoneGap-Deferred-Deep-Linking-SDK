@@ -5,3 +5,10 @@ testbed/hooks
 node_modules
 testbed/ul_web_hooks/
 .installed
+.gradle/
+.idea/
+cordova-ionic-phonegap-branch-deep-linking.iml
+local.properties
+out/
+src/cordova-ionic-phonegap-branch-deep-linking.iml
+npm-debug.log

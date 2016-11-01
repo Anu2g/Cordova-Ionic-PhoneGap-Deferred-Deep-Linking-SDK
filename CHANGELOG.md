@@ -2,6 +2,21 @@
 All notable changes to the Branch Web SDK will be documented here.
 The Branch Web SDK adheres to [Semantic Versioning](http://semver.org/).
 
+## [v2.2.2] - 2016-09-15
+- Updated iOS library to v 0.12.11
+- Added back support for setDebug
+
+## [v2.2.1] - 2016-09-15
+- Updated iOS library to v 0.12.10
+- Support for iOS extensions (iMessage apps)
+- New mechanism for incorporating the Android library (build.gradle extension)
+- Added support for routing non Branch links (`NonBranchLinkHandler`)
+- Number of small fixes and tweaks
+
+## [v2.1.0] - 2016-05-20
+
+We've been frantically addressing all of the discrepancies and bugs over the last couple months. This version marks a stable update that should have resolved most of the issues.
+
 ## [v2.0.0] - 2016-02-26
 
 We've completely revamped this module from a native implementation, which was terribly out of date with the Branch service to a thin wrapper around our core Android/iOS SDKs. Additionally, we've improved the interface from callbacks to promises in most circumstances.
