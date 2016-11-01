@@ -45,6 +45,7 @@ public class BranchSDK extends CordovaPlugin {
         this.activity = null;
         this.instance = null;
         this.branchObjectWrappers = new ArrayList<BranchUniversalObjectWrapper>();
+
     }
 
     /**
@@ -219,6 +220,7 @@ public class BranchSDK extends CordovaPlugin {
 
         this.instance = Branch.getAutoInstance(this.activity.getApplicationContext());
         this.instance.initSession(new SessionListener(callbackContext), data, activity);
+
     }
 
     /**
@@ -244,6 +246,7 @@ public class BranchSDK extends CordovaPlugin {
      * @param callbackContext A callback to execute at the end of this method
      */
     private void redeemRewards(final int value, CallbackContext callbackContext) {
+
         this.instance.redeemRewards(value, new RedeemRewardsListener(callbackContext));
 
     }
@@ -273,7 +276,9 @@ public class BranchSDK extends CordovaPlugin {
      * @param bucket          Load reward of a specific bucket
      */
     private void loadRewards(String bucket, CallbackContext callbackContext) {
+
         this.instance.loadRewards(new LoadRewardsListener(bucket, callbackContext, this.instance));
+
     }
 
     /**
@@ -701,7 +706,10 @@ public class BranchSDK extends CordovaPlugin {
                     this._callbackContext.error(message);
                 }
             }
+
+
         }
+
     }
 
     protected class LogoutStatusListener implements Branch.LogoutStatusListener {
@@ -722,9 +730,11 @@ public class BranchSDK extends CordovaPlugin {
         @Override
         public void onLogoutFinished(boolean loggedOut, BranchError error) {
             if (error == null) {
+
                 branchObjectWrappers = new ArrayList<BranchUniversalObjectWrapper>();
 
                 this._callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, /* send boolean: is logged out */ loggedOut));
+
             } else {
 
                 Log.d(LCAT, "error on logout");
@@ -776,11 +786,9 @@ public class BranchSDK extends CordovaPlugin {
         public void onRegisterViewFinished(boolean registered, BranchError error) {
 
             if (error == null) {
-                // HURDLR: note that this is inconsistent with iOS, but we don't use it yet.
-                // Ideally, we'd do this._callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, /* send boolean: is logged out */ loggedOut));
-                // and return the same bool in iOS, though the iOS SDK doesn't return a bool at this time.
                 this._callbackContext.success("Success");
             } else {
+
                 String errorMessage = error.getMessage();
 
                 Log.d(LCAT, errorMessage);
