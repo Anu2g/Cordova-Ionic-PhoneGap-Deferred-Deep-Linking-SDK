@@ -36,8 +36,14 @@
 
 // Respond to Universal Links
 - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray *restorableObjects))restorationHandler {
-    BOOL handledByBranch = [[Branch getInstance] continueUserActivity:userActivity];
-    return handledByBranch;
+    if (![[Branch getInstance] continueUserActivity:userActivity]) {
+        // send unhandled URL to notification
+        if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
+            [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:@"BSDKPostUnhandledURL" object:[userActivity.webpageURL absoluteString]]];
+        }
+    }
+    
+    return YES;
 }
 
 @end
