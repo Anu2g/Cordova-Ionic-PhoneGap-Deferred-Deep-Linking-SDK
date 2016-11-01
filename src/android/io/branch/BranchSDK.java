@@ -790,36 +790,6 @@ public class BranchSDK extends CordovaPlugin {
         }
     }
 
-    protected class RedeemRewardsListener implements Branch.BranchReferralStateChangedListener
-    {
-        private CallbackContext _callbackContext;
-
-        // Constructor that takes in a required callbackContext object
-        public RedeemRewardsListener(CallbackContext callbackContext) {
-            this._callbackContext = callbackContext;
-        }
-
-        // Listener that implements BranchReferralStateChangedListener for redeemRewards
-        @Override
-        public void onStateChanged(boolean changed, BranchError error) {
-
-            if (error == null) {
-
-                this._callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, /* send boolean: is changed */ changed));
-
-            } else {
-
-                String errorMessage = error.getMessage();
-
-                Log.d(LCAT, errorMessage);
-
-                this._callbackContext.error(errorMessage);
-
-            }
-
-        }
-    }
-
     protected class LoadRewardsListener implements Branch.BranchReferralStateChangedListener {
         private CallbackContext _callbackContext;
         private Branch _instance;
